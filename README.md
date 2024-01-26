@@ -23,7 +23,9 @@ Take `all-mpnet-base-v2` as an example:
 ```bash
 mkdir embedding_models
 git lfs install
-git clone https://huggingface.co/sentence-transformers/all-mpnet-base-v2
+export HF_ENDPOINT=https://hf-mirror.com
+
+git clone $HF_ENDPOINT/sentence-transformers/all-mpnet-base-v2
 mv all-mpnet-base-v2 embedding_models/
 ```
 
@@ -50,3 +52,6 @@ CUDA_VISIBLE_DEVICES=0 python embedding_server.py
 ## Usage
 
 https://apifox.com/apidoc/shared-fb1805a7-e3e7-4fce-9b9e-3bd69c45e171/api-123096464
+
+## ToDo
+- [ ] Support multiple instance to make work load balance.
