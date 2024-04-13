@@ -29,7 +29,9 @@ class Usage(BaseModel):
     """
     Don't use the tokenizer, so just the prompt's length.
     """
-    prompt_length: int = Field(..., example=15)
+
+    prompt_tokens: int = Field(..., example=15)
+    total_tokens: int = Field(..., example=15)
 
 
 class Embedding(BaseModel):
@@ -44,14 +46,14 @@ class EmbeddingResponse(BaseResponse):
     usage: Usage = Field(...)
 
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class DocumentBaseResponse(BaseModel):
     message: str = Field(..., example="Document added successfully.")
     data: Optional[T] = Field(None, example=None)
     code: int = Field(..., example=200)
-    
+
 
 class DocumentAddingRequest(BaseRequest):
     emb_model_type: str = Field(..., example="default")
@@ -63,8 +65,8 @@ class DocumentAddingRequest(BaseRequest):
 
 
 class DocumentAddingResponse(DocumentBaseResponse):
-    pass 
-    
+    pass
+
 
 class DocumentQueryRequest(BaseRequest):
     emb_model_type: str = Field(..., example="default")
@@ -72,7 +74,9 @@ class DocumentQueryRequest(BaseRequest):
     collection_type: CollectionType = Field(..., example=CollectionType.history)
     query: str = Field(..., example="query string")
     n_results: int = Field(..., example=10)
-    meta_filter: Optional[dict] = Field(None, example={"$and": [{"agent": "Dobby"}, {"type": "quote"}]})
+    meta_filter: Optional[dict] = Field(
+        None, example={"$and": [{"agent": "Dobby"}, {"type": "quote"}]}
+    )
 
 
 class DocumentQueryResponse(DocumentBaseResponse):

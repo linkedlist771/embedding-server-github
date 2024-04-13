@@ -5,3 +5,4 @@ numpy==1.24.3
 pydantic
 uvicorn
 sentence_transformers
+tiktoken
