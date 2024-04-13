@@ -77,5 +77,9 @@ curl --location --request GET '127.0.0.1:8848/v1/get_collection_config' \
 
 https://apifox.com/apidoc/shared-fb1805a7-e3e7-4fce-9b9e-3bd69c45e171/api-123096464
 
+# Contribution
+
+PR is welcome, please follow the code style with [format.sh](format.sh).
+
 ## ToDo
 - [ ] Support multiple instance to make work load balance.
