@@ -6,6 +6,11 @@
 > Embedding has been deployed on GPU server
 > remotely to provide embedding service.
 
+## 🆕 New: 
+This project will be rebuild with `Rust` to provide a more efficient and faster service. 
+Please check [embedding-server-github-rust](https://github.com/linkedlist771/embedding-server-github-rust) 
+for details.
+
 ## Installation
 ```bash
 pip install -r requirements.txt
