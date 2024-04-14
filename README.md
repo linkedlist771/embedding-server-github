@@ -6,7 +6,7 @@
 > Embedding has been deployed on GPU server
 > remotely to provide embedding service.
 
-埋め込みサーバーの詳細については、ご希望の言語を選択してください：
+Select your preferred language for further details on the embedding server:
 - [English](README.md)
 - [日本語 (Japanese)](README-jp.md)
 
