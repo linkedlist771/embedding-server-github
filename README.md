@@ -6,6 +6,11 @@
 > Embedding has been deployed on GPU server
 > remotely to provide embedding service.
 
+埋め込みサーバーの詳細については、ご希望の言語を選択してください：
+- [English](README.md)
+- [日本語 (Japanese)](README-jp.md)
+
+
 ## 🆕 New: 
 This project will be rebuild with `Rust` to provide a more efficient and faster service. 
 Please check [embedding-server-github-rust](https://github.com/linkedlist771/embedding-server-github-rust) 
