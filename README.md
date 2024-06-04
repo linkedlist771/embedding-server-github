@@ -45,7 +45,7 @@ mv all-mpnet-base-v2 embedding_models/
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 python embedding_server.py 
---models_dir_path embedding_deployment_model/ 
+--models_dir_path embedding_models/ 
 --use_gpu --port port --host host
 
 ```
@@ -54,7 +54,7 @@ CUDA_VISIBLE_DEVICES=0 python embedding_server.py
 for example:
 ```bash
 CUDA_VISIBLE_DEVICES=0 python embedding_server.py 
---models_dir_path embedding_deployment_model/ 
+--models_dir_path embedding_models/ 
 --use_gpu --port 8000 --host 0.0.0.0
 
 ```
