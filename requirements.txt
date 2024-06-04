@@ -1,5 +1,6 @@
 chromadb==0.4.15
 fastapi==0.104.1
+robyn
 fire==0.5.0
 numpy==1.24.3
 pydantic

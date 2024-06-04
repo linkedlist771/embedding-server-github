@@ -1,12 +1,14 @@
 import os
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import Response
 from fastapi import APIRouter
 from starlette.exceptions import HTTPException as StarletteHTTPException
 import argparse
 import fire
-import uvicorn
+from robyn import Robyn, Request
+from robyn import SubRouter, jsonify, WebSocket
+from robyn import logger
+import json
 import copy
 from schema import (
     Usage,
@@ -14,6 +16,7 @@ from schema import (
     EmbeddingRequest,
     EmbeddingResponse,
 )
+
 from utils.embedding_utils import (
     get_model_list,
     load_model,
@@ -38,28 +41,9 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
-# app = FastAPI(docs_url=None, redoc_url=None)
-models = {}
-tokenizer = None
-supported_models: str = ""
-# get the logger
-logger = get_logger(__name__)
-router = APIRouter(prefix="/v1")
-
-# init the collection
-collections_config = copy.deepcopy(COLLECTIONS_CONFIG)
-for collection_config in collections_config:
-    # (COLLECTIONS_CONFIG, collection_type, emb_model_type="default", custom_index=0)
-    emb_model_type = collection_config["embedding_model_type"]
-    custom_index = (
-        collection_config.get("model_index", 0) if emb_model_type == "custom" else 0
-    )
-logger.info("Collections initialized successfully.")
-# Embedding related.
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
+def on_start():
     global supported_models, tokenizer
     logger.info("Starting to load models...")
     if args.use_gpu:
@@ -68,6 +52,7 @@ async def lifespan(app: FastAPI):
         )
     else:
         logger.info("GPU is disabled. The current model will be loaded on CPU.")
+        # 我觉得时间都花在传输哪个embedding tensor上了。 
     model_infos = get_model_list(args.models_dir_path)
     try:
         for model_info in model_infos:
@@ -81,21 +66,48 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Error loading models: {e}")
         raise
-    yield
+
+
+# app = FastAPI(docs_url=None, redoc_url=None)
+models = {}
+tokenizer = None
+supported_models: str = ""
+# get the logger
+# logger = get_logger(__name__)
+router = SubRouter(__name__, prefix="/v1")
+
+
+# init the collection
+collections_config = copy.deepcopy(COLLECTIONS_CONFIG)
+for collection_config in collections_config:
+    # (COLLECTIONS_CONFIG, collection_type, emb_model_type="default", custom_index=0)
+    emb_model_type = collection_config["embedding_model_type"]
+    custom_index = (
+        collection_config.get("model_index", 0) if emb_model_type == "custom" else 0
+    )
+logger.info("Collections initialized successfully.")
+
+
+
+# Embedding related.
+
+
+
+
+app = Robyn(__file__)
+
+async def startup_handler():
+    on_start()
+
+
+@app.shutdown_handler
+def shutdown_handler():
+    global models, tokenizer
     models.clear()
-    logger.info("All models unloaded.")
 
-
-app = FastAPI(lifespan=lifespan)
-
-
-@app.exception_handler(StarletteHTTPException)
-async def http_exception_handler(request: Request, exc: StarletteHTTPException):
-    logger.error(f"HTTPException caught: {exc.detail}, Status Code: {exc.status_code}")
-    if exc.status_code == 404:
-        return Response(content=None, status_code=exc.status_code)
-    return Response(content=str(exc.detail), status_code=exc.status_code)
-
+@app.post("/")
+async def h(request: Request):
+    return request.body
 
 @router.get("/get_model_types")
 async def model_type() -> list:
@@ -110,24 +122,30 @@ async def collection_config() -> list:
     logger.info("Received request for collection config.")
     logger.info("Sending response for collection config.")
     return collections_config
+from viztracer import log_sparse
 
 
-@router.post("/embeddings", response_model=EmbeddingResponse)
-async def create_embedding(embedding_request: EmbeddingRequest) -> EmbeddingResponse:
+@router.post("/embeddings")
+@log_sparse
+async def embeddings(request: Request) -> EmbeddingResponse:
+    embedding_request = request.body
+    logger.info(f"embedding_request: {embedding_request}")
+    embedding_request = json.loads(embedding_request)
+    embedding_request = EmbeddingRequest.model_validate(embedding_request)
     logger.info(f"Received embedding request for model: {embedding_request.model}")
 
     model_name = embedding_request.model
-    if model_name not in models:
-        logger.error(f"Only support models: {supported_models}, {model_name} not found")
-        raise HTTPException(
-            status_code=404,
-            detail=f"Only support models: {supported_models}, {model_name} not found",
-        )
+    # if model_name not in models:
+    #     logger.error(f"Only support models: {supported_models}, {model_name} not found")
+    #     raise HTTPException(
+    #         status_code=404,
+    #         detail=f"Only support models: {supported_models}, {model_name} not found",
+    #     )
     model = models.get(model_name)
 
-    if not model:
-        logger.error(f"Model {model_name} not found")
-        raise HTTPException(status_code=404, detail=f"Model {model_name} not found")
+    # if not model:
+    #     logger.error(f"Model {model_name} not found")
+    #     raise HTTPException(status_code=404, detail=f"Model {model_name} not found")
     input_text = embedding_request.input
     embeddings_list = get_embedding(model, input_text, use_gpu=args.use_gpu)
     # Simulate the usage information, you need to replace this with actual values
@@ -145,18 +163,19 @@ async def create_embedding(embedding_request: EmbeddingRequest) -> EmbeddingResp
     # Create the EmbeddingResponse object
     embedding_response = EmbeddingResponse(
         object="list", data=data, model=model_name, usage=usage_info
-    )
+    ).model_dump()
+
     logger.info("Embedding response sent.")
-    return embedding_response
+    return jsonify(embedding_response)
 
 
 def start_server(port=args.port, host=args.host):
     logger.info(f"Starting server at {host}:{port}")
     app.include_router(router)
-    config = uvicorn.Config(app, host=host, port=port)
-    server = uvicorn.Server(config=config)
+    app.startup_handler(startup_handler)
+
     try:
-        server.run()
+        app.start(port=port, host=host)
     finally:
         logger.info("Server shutdown.")
 
